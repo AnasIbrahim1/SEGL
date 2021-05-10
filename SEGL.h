@@ -4,7 +4,9 @@
 
 // SEGL is for Simple Efficient Graph Library
 #include <iostream>
+#include <unordered_set>
 #include <set>
+#include <queue>
 #include <vector>
 #include <algorithm>
 using namespace std;
@@ -38,9 +40,16 @@ private:
 	int numNodes;
 	int numEdges;
 	vector<g_node<T>> nodes;
+	vector<g_node<T>> nodes_transpose;
 	void dfs(int node, vector<bool>& visited);
-	bool existsPath(int from, int to, vector<bool> visited);
+	bool existsPath(int from, int to, vector<bool>& visited);
 	bool containNegativeWeights;
+	unordered_set<int> hasOutdegree; // store the indices of the nodes that have such that outdegree != 0
+	unordered_set<int> hasOutdegreeTranspose; // same but for transpose
+	void listEdges();
+	vector<pair<pair<int, int>, int>> edgeList;
+	bool topSort(vector<int>& sorted, SEGL<T>& new_graph, vector<bool>& finished, int& finishedCount);
+
 public:
 	SEGL();
 	SEGL(int size);
@@ -70,8 +79,11 @@ public:
 
 	set<pair<int, int>> adjacent(int node);
 
+	vector<pair<pair<int, int>, int>> getEdgeList();
+
 	int numOfNodes();
-	int numOfEdges();
+	int numOfDirEdges();
+	int numOfEdges(); // assuming the graph is undirected
 
 	bool existsNode(const T& value); 
 
@@ -87,18 +99,21 @@ public:
 
 	bool existsCycle(); // assuming undirected
 
-	bool isTree();
+	bool isTree(); // assuming undirected
 
 	bool existsPath(int from, int to); // Normal DFS, to do is optimize
 
 	int shortestDistance(int from, int to);	
 
-	pair<int, vector<int>> shortestPath(); // TO-DO: checking if there exists a path or no
-	// To Do: understand the bellman-ford algorithm
+	vector<int> shortestDistanceAll(int from);
+
+	pair<int, vector<int>> shortestPath(int from, int to);
 	
-	int numSCCs(); // Kosaraju's
+	pair<bool,vector<int>> topSort(); // first is -1 if there doesn't exist a topological Sorting
 
 	bool isDAG();
+
+	int numSCCs(); // Kosaraju's
 
 	// traversal 
 	bool existsHamiltonian(); // *
@@ -106,8 +121,6 @@ public:
 	
 	void condenseSCCs(); // *
 	// condense strongly connected components (Kosaraju's Algorithm)
-	
-	vector<int> topoSort(); // *
 	
 	void clear();
 	~SEGL();
@@ -123,6 +136,7 @@ SEGL<T>::SEGL()
 template <class T>
 SEGL<T>::SEGL(int size) : numNodes(size), numEdges(0) {
 	nodes.resize(size);
+	nodes_transpose.resize(size);
 	containNegativeWeights = false;
 }
 
@@ -133,6 +147,7 @@ SEGL<T>::SEGL(const SEGL& old_graph) {
 	this->numEdges = old_graph.numEdges;
 	this->containNegativeWeights = old_graph.containNegativeWeights;
 	this->nodes = old_graph.nodes;
+	this->nodes_transpose = old_graph.nodes_transpose;
 }
 
 template <class T>
@@ -142,23 +157,29 @@ void SEGL<T>::operator = (const SEGL& old_graph) {
 	this->numEdges = old_graph.numEdges;
 	this->containNegativeWeights = old_graph.containNegativeWeights;
 	this->nodes = old_graph.nodes;
+	this->nodes_transpose = old_graph.nodes_transpose;
 }
 
 template <class T>
 void SEGL<T>::addNode() {
 	numNodes++;
 	nodes.push_back(g_node<T>());
+	nodes_transpose.push_back(g_node<T>());
 }
 
 template <class T>
 void SEGL<T>::addNode(const T& value) {
 	numNodes++;
 	nodes.push_back(g_node<T>(value));
+	nodes_transpose.push_back(g_node<T>(value));
 }
 
 template <class T>
 void SEGL<T>::addDirEdge(int from, int to) {
 	nodes[from].insert({ to, 1 });
+	nodes_transpose[to].insert({ from, 1 });
+	hasOutdegree.insert(from);
+	hasOutdegreeTranspose.insert(to);
 	numEdges++;
 }
 
@@ -172,6 +193,9 @@ template <class T>
 void SEGL<T>::addDirWeightedEdge(int from, int to, int weight) {
 	if (weight < 0) containNegativeWeights = true;
 	nodes[from].insert({ to, weight });
+	nodes_transpose[to].insert({ from, weight });
+	hasOutdegree.insert(from);
+	hasOutdegreeTranspose.insert(to);
 	numEdges++;
 }
 
@@ -183,11 +207,13 @@ void SEGL<T>::addWeightedEdge(int node_1, int node_2, int weight) {
 
 template <class T>
 void SEGL<T>::removeDirEdge(int from, int to) {
+	// erasing from normal graph
 	auto edge = lower_bound(nodes[from].adjList.begin(), nodes[from].adjList.end(), make_pair(to, INT_MIN));
 	if (edge == nodes[from].adjList.end() || edge->first != to) return;
 	auto it = edge++;
-	if (edge == nodes[from].adjList.end())
+	if (edge == nodes[from].adjList.end()) {
 		nodes[from].adjList.erase(it);
+	}
 	else {
 		while (edge != nodes[from].adjList.end() && it->first == to) {
 			nodes[from].adjList.erase(it);
@@ -195,6 +221,22 @@ void SEGL<T>::removeDirEdge(int from, int to) {
 		}
 		if (it != nodes[from].adjList.end() && it->first == to) nodes[from].adjList.erase(it);
 	}
+	if (nodes[from].adjList.size() == 0) hasOutdegree.erase(from);
+
+	// erasing from transpose
+	auto edge2 = lower_bound(nodes_transpose[to].adjList.begin(), nodes_transpose[to].adjList.end(), make_pair(from, INT_MIN));
+	if (edge2 == nodes_transpose[to].adjList.end() || edge2->first != from) return;
+	auto it2 = edge2++;
+	if (edge2 == nodes_transpose[to].adjList.end())
+		nodes_transpose[to].adjList.erase(it2);
+	else {
+		while (edge2 != nodes_transpose[to].adjList.end() && it->first == from) {
+			nodes_transpose[to].adjList.erase(it);
+			it2 = edge2++;
+		}
+		if (it2 != nodes_transpose[to].adjList.end() && it2->first == from) nodes_transpose[to].adjList.erase(it2);
+	}
+	if (nodes_transpose[to].adjList.size() == 0) hasOutdegreeTranspose.erase(to);
 }
 
 template <class T> 
@@ -220,6 +262,23 @@ void SEGL<T>::removeDirEdge(int from, int to, int weight) {
 		if (it != nodes[from].adjList.end() && it->first == to && it->second == weight) 
 			nodes[from].adjList.erase(it);
 	}
+	if (nodes[from].adjList.size() == 0) hasOutdegree.erase(from);
+
+	// transpose
+	auto edge2 = lower_bound(nodes_transpose[to].adjList.begin(), nodes_transpose[to].adjList.end(), make_pair(from, weight));
+	if (edge2->first != from || edge2->second != weight) return;
+	auto it2 = edge2++;
+	if (edge2 == nodes_transpose[to].adjList.end())
+		nodes_transpose[to].adjList.erase(it2);
+	else {
+		while (edge2 != nodes_transpose[to].adjList.end() && it2->first == from && it2->second == weight) {
+			nodes_transpose[to].adjList.erase(it2);
+			it2 = edge2++;
+		}
+		if (it2 != nodes_transpose[to].adjList.end() && it2->first == from && it2->second == weight)
+			nodes_transpose[to].adjList.erase(it2);
+	}
+	if (nodes_transpose[to].adjList.size() == 0) hasOutdegreeTranspose.erase(to);
 }
 
 template <class T>
@@ -257,13 +316,7 @@ int SEGL<T>::outdegree(int node) {
 
 template <class T>
 int SEGL<T>::indegree(int node) {
-	int count = 0;
-	for (int i = 0; i < numNodes; i++) {
-		// now binary search nodes[i].adjList for node
-		auto it = lower_bound(nodes[i].adjList.begin(), nodes[i].adjList.end(), { node, INT_MIN });
-		if (it != nodes[i].adjList.begin() && it->first == node) count++;
-	}
-	return count;
+	return nodes_transpose[node].adjList.size();
 }
 
 template <class T>
@@ -299,21 +352,27 @@ int SEGL<T>::numOfNodes() {
 }
 
 template <class T>
-int SEGL<T>::numOfEdges() {
+int SEGL<T>::numOfDirEdges() {
 	return numEdges;
 }
 
 template <class T>
+int SEGL<T>::numOfEdges() {
+	return (numEdges / 2);
+}
+
+template <class T>
+void SEGL<T>::listEdges() { // O(E)
+	edgeList.clear();
+	for (auto it = hasOutdegree.begin(); it != hasOutdegree.end(); it++) 
+		for (auto u : nodes[*it].adjList)
+			edgeList.push_back({ {*it, u.first}, u.second });
+}
+
+template <class T>
 void SEGL<T>::transpose() {
-	vector<set<pair<int, int>>> adjListnew(numNodes);
-	// create a new adjacency list with the transpose
-	for (int i = 0; i < numNodes; i++) 
-		for (auto u : nodes[i].adjList) 
-			adjListnew[u.first].insert(make_pair(i, u.second));
-	for (int i = 0; i < numNodes; i++)
-		nodes[i].adjList.clear();
-	for (int i = 0; i < numNodes; i++)
-		nodes[i].adjList = adjListnew[i];
+	swap(nodes, nodes_transpose);
+	swap(hasOutdegree, hasOutdegreeTranspose);
 }
 
 template <class T>
@@ -352,7 +411,7 @@ bool SEGL<T>::existsPath(int from, int to) {
 }
 
 template <class T>
-bool existsPath(int from, int to, vector<bool> visited) {
+bool SEGL<T>::existsPath(int from, int to, vector<bool>& visited) {
 	visited[from] = 1;
 	if (from == to) return true;
 	bool flag = false;
@@ -375,4 +434,125 @@ SEGL<T>::~SEGL() {
 	this->clear();
 }
 
-#endif // !SEGL_H
+template <class T>
+vector<int> SEGL<T>::shortestDistanceAll(int from) {
+	if (containNegativeWeights) { // Bellman-Ford O(V*E)
+		vector<int> dist(numNodes, INT_MAX);
+		dist[from] = 0;
+		listEdges();
+		for (int i = 0; i < numNodes - 1; i++)
+			for (auto edge : edgeList)
+				dist[edge.first.second] = min(dist[edge.first.second], dist[edge.first.first] + edge.second);
+		return dist;
+	}
+	else { // Dijkstra's, O(E + VLOG(V))
+		vector<bool> visited(numNodes);
+		vector<int> dist(numNodes, INT_MAX);
+		dist[from] = 0;
+		priority_queue<pair<int,int>> q;
+		q.push({ 0, from });
+		while (!q.empty()) {
+			int a = q.top().second; q.pop();
+			visited[a] = true;
+			for (auto u : nodes[a].adjList) 
+				if (!visited[u.f]) {
+					dist[u.f] = min(dist[u.f], dist[a] + u.s);
+					q.push({ -1 * dist[u.f], u.f});
+				}
+		}
+		return dist;
+	}
+}
+
+template <class T>
+int SEGL<T>::shortestDistance(int from, int to) {
+	vector<int> dist = shortestDistanceAll(from);
+	return dist[to];
+}
+
+template <class T>
+pair<int, vector<int>> SEGL<T>::shortestPath(int from, int to) {
+	vector<pair<int, int>> path(numNodes, { INT_MAX, -1 }); // first is distance, second is previous
+	if (containNegativeWeights) { // Bellman-Ford O(V*E)
+		path[from].first = 0;
+		listEdges();
+		for (int i = 0; i < numNodes - 1; i++)
+			for (auto edge : edgeList)
+				if (path[edge.first.second].first > path[edge.first.first].first + edge.second)
+					path[edge.first.second] = { path[edge.first.first].first + edge.second, edge.first.first };
+	}
+	else { // Dijkstra's, O(E + VLOG(V))
+		vector<bool> visited(numNodes);
+		priority_queue<pair<int, int>> q;
+		path[from].first = 0;
+		q.push({ 0, from });
+		while (!q.empty()) {
+			int a = q.top().second; q.pop();
+			visited[a] = 1;
+			for (auto u : nodes[a].adjList) {
+				if (path[a].first + u.second < path[u.first].first) {
+					path[u.first].first = path[a].first + u.second;
+					path[u.first].second = a;
+					q.push({ -1 * path[u.first].first, u.first });
+				}
+			}
+		}
+	}
+	vector<int> patho;
+	if (path[to].second == -1) return { -1, patho };
+	patho.push_back(to);
+	int previous = path[to].second;
+	while (previous != from) {
+		patho.push_back(previous);
+		previous = path[previous].second;
+	}
+	patho.push_back(from);
+	reverse(patho.begin(), patho.end());
+	return { path[to].first, patho };
+}
+
+template <class T>
+vector<pair<pair<int, int>, int>> SEGL<T>::getEdgeList() {
+	listEdges();
+	return edgeList;
+}
+
+template <class T>
+bool SEGL<T>::topSort(vector<int>& sorted, SEGL<T>& new_graph, vector<bool>& finished, int& finishedCount) {
+	int temp = -1;
+	for (int i = 0; i < numNodes; i++)
+		if (nodes_transpose[i].adjList.size() == 0 && !finished[i]) {
+			temp = i;
+			break;
+		}
+	if (temp == -1) if (finishedCount < numNodes) return false;
+	if (finishedCount == numNodes) return true;
+	sorted.push_back(temp);
+	finished[temp] = 1;
+	finishedCount++;
+	auto lis = new_graph.nodes[temp].adjList;
+	for (auto u : list)
+		new_graph.removeDirEdge(temp, u.f);
+	return topSort(sorted, new_graph, finished, finishedCount);
+}
+
+template <class T>
+pair<bool, vector<int>> SEGL<T>::topSort() {
+	vector<bool> finished(numNodes);
+	vector<int> topsort;
+	SEGL<T> new_graph = *this;
+	int finishedCount = 0;
+	bool b = topSort(topsort, new_graph, finished, finishedCount);
+	return { b, topsort };
+}
+
+template <class T>
+bool SEGL<T>::isDAG() {
+	vector<bool> finished(numNodes);
+	vector<int> topsort;
+	SEGL<T> new_graph = *this;
+	int finishedCount = 0;
+	return topSort(topsort, new_graph, finished, finishedCount);
+}
+
+#endif 
