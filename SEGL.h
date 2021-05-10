@@ -15,6 +15,21 @@ struct g_node {
 	set<pair<int, int>> adjList; // first is the node index, and second is the weight
 	g_node() : value() {}
 	g_node(const T& data) : value(data) {}
+	g_node(const g_node& old_node) {
+		this->value = old_node.value;
+		this->adjList.clear(); this->adjList = old_node.adjList;
+	}
+	void operator = (const g_node& old_node) {
+		this->clear();
+		this->value = old_node.value;
+		this->adjList.clear(); this->adjList = old_node.adjList;
+	}
+	void clear() {
+		adjList.clear();
+	}
+	~g_node() {
+		this->clear();
+	}
 };
 
 template <class T>
@@ -24,9 +39,14 @@ private:
 	int numEdges;
 	vector<g_node<T>> nodes;
 	void dfs(int node, vector<bool>& visited);
+	bool existsPath(int from, int to, vector<bool> visited);
+	bool containNegativeWeights;
 public:
 	SEGL();
 	SEGL(int size);
+
+	SEGL(const SEGL& old_graph);
+	void operator = (const SEGL& new_graph);
 
 	void addNode();
 	void addNode(const T& value);
@@ -45,35 +65,42 @@ public:
 	void setNodeValue(const T& old, const T& New); 
 	T getNodeValue(int node);
 
+	int indegree(int node);
+	int outdegree(int node);
+
 	set<pair<int, int>> adjacent(int node);
 
-	int size();
+	int numOfNodes();
+	int numOfEdges();
 
 	bool existsNode(const T& value); 
 
 	bool existsEdge(int from, int to); // if exists directed edge, then exists undirected edge
 	bool existsEdge(int from, int to, int weight);
 
-	int edgeWeight(int node_1, int node_2); // two nodes, return weight
+	int edgeWeight(int node_1, int node_2);
 
 	void transpose();
 
-	int numConnectedComponents(); // TO-DO: work on direct access instead of implementing dfs each time
+	int numConnectedComponents(); // assuming undirected
+	// TO-DO: work on direct access instead of implementing dfs each time
 
-	bool existsCycle();
+	bool existsCycle(); // assuming undirected
 
 	bool isTree();
 
-	bool existsPath(int from, int to);
+	bool existsPath(int from, int to); // Normal DFS, to do is optimize
 
-	int shortestDistance(int from, int to); 
+	int shortestDistance(int from, int to);	
 
 	pair<int, vector<int>> shortestPath(); // TO-DO: checking if there exists a path or no
 	// To Do: understand the bellman-ford algorithm
 	
+	int numSCCs(); // Kosaraju's
+
+	bool isDAG();
+
 	// traversal 
-	
-	bool inSameConnectedComponent();
 	bool existsHamiltonian(); // *
 	bool existsEulerian(); // *
 	
@@ -89,11 +116,32 @@ public:
 template <class T>
 SEGL<T>::SEGL() 
 	: numNodes(0), numEdges(0)
-{}
+{
+	containNegativeWeights = false;
+}
 
 template <class T>
 SEGL<T>::SEGL(int size) : numNodes(size), numEdges(0) {
 	nodes.resize(size);
+	containNegativeWeights = false;
+}
+
+template <class T>
+SEGL<T>::SEGL(const SEGL& old_graph) {
+	this->clear();
+	this->numNodes = old_graph.numNodes;
+	this->numEdges = old_graph.numEdges;
+	this->containNegativeWeights = old_graph.containNegativeWeights;
+	this->nodes = old_graph.nodes;
+}
+
+template <class T>
+void SEGL<T>::operator = (const SEGL& old_graph) {
+	this->clear();
+	this->numNodes = old_graph.numNodes;
+	this->numEdges = old_graph.numEdges;
+	this->containNegativeWeights = old_graph.containNegativeWeights;
+	this->nodes = old_graph.nodes;
 }
 
 template <class T>
@@ -122,6 +170,7 @@ void SEGL<T>::addEdge(int node_1, int node_2) {
 
 template <class T>
 void SEGL<T>::addDirWeightedEdge(int from, int to, int weight) {
+	if (weight < 0) containNegativeWeights = true;
 	nodes[from].insert({ to, weight });
 	numEdges++;
 }
@@ -135,9 +184,9 @@ void SEGL<T>::addWeightedEdge(int node_1, int node_2, int weight) {
 template <class T>
 void SEGL<T>::removeDirEdge(int from, int to) {
 	auto edge = lower_bound(nodes[from].adjList.begin(), nodes[from].adjList.end(), make_pair(to, INT_MIN));
-	if (edge->first != to) return;
+	if (edge == nodes[from].adjList.end() || edge->first != to) return;
 	auto it = edge++;
-	if (edge == nodes[from].adjList.end()) 
+	if (edge == nodes[from].adjList.end())
 		nodes[from].adjList.erase(it);
 	else {
 		while (edge != nodes[from].adjList.end() && it->first == to) {
@@ -202,6 +251,22 @@ bool SEGL<T>::existsNode(const T& value) {
 }
 
 template <class T>
+int SEGL<T>::outdegree(int node) {
+	return nodes[node].adjList.size();
+}
+
+template <class T>
+int SEGL<T>::indegree(int node) {
+	int count = 0;
+	for (int i = 0; i < numNodes; i++) {
+		// now binary search nodes[i].adjList for node
+		auto it = lower_bound(nodes[i].adjList.begin(), nodes[i].adjList.end(), { node, INT_MIN });
+		if (it != nodes[i].adjList.begin() && it->first == node) count++;
+	}
+	return count;
+}
+
+template <class T>
 int SEGL<T>::edgeWeight(int from, int to) { // returns minimum edge weight if exists, otherwise infinity
 	auto edge = lower_bound(nodes[from].adjList.begin(), nodes[from].adjList.end(), make_pair(to, INT_MIN));
 	if (edge == nodes[from].adjList.end() || edge->first != to) return INT_MAX;
@@ -220,7 +285,7 @@ void SEGL<T>::setNodeValue(const T& old, const T& New) {
 
 template <class T>
 T SEGL<T>::getNodeValue(int node) {
-	retrun nodes[node].value;
+	return nodes[node].value;
 }
 
 template <class T>
@@ -229,8 +294,13 @@ set<pair<int, int>> SEGL<T>::adjacent(int node) {
 }
 
 template <class T>
-int SEGL<T>::size() {
+int SEGL<T>::numOfNodes() {
 	return numNodes;
+}
+
+template <class T>
+int SEGL<T>::numOfEdges() {
+	return numEdges;
 }
 
 template <class T>
@@ -247,7 +317,7 @@ void SEGL<T>::transpose() {
 }
 
 template <class T>
-int numConnectedComponents() { // DFS
+int SEGL<T>::numConnectedComponents() { // DFS
 	vector<bool> visited(numNodes);
 	int count = 0;
 	for (int i = 0; i < numNodes; i++)
@@ -266,15 +336,43 @@ void SEGL<T>::dfs(int node, vector<bool>& visited) {
 }
 
 template <class T>
-bool SEGL<T>::existsCycle() {
+bool SEGL<T>::existsCycle() { // assumes that the graph is undirected
 	return (numEdges > numNodes - numConnectedComponents());
 }
 
 template <class T>
-bool SEGL<T>::isTree() {
+bool SEGL<T>::isTree() { // function assumes that the graph is undirected
 	return (numConnectedComponents() == 1 && numEdges == numNodes - 1);
 }
 
+template <class T>
+bool SEGL<T>::existsPath(int from, int to) {
+	vector<bool> visited(numNodes);
+	return existsPath(from, to, visited);
+}
 
+template <class T>
+bool existsPath(int from, int to, vector<bool> visited) {
+	visited[from] = 1;
+	if (from == to) return true;
+	bool flag = false;
+	for (auto u : nodes[from].adjList) 
+		if (!visited[u.f]) 
+			flag = flag || existsPath(u.f, to, visited);
+	return flag;
+}
+
+template <class T>
+void SEGL<T>::clear() {
+	numNodes = 0;
+	numEdges = 0;
+	nodes.clear();
+	containNegativeWeights = false;
+}
+
+template <class T>
+SEGL<T>::~SEGL() {
+	this->clear();
+}
 
 #endif // !SEGL_H
