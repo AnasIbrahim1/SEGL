@@ -9,68 +9,19 @@
 \usepackage{eucal}
 \usepackage{amsaddr}
 \usepackage{listings}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%a
-
-\def\citeasnoun{\cite}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\newtheorem{theorem}{Theorem}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\numberwithin{equation}{section}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\newcommand{\beq}{\begin{equation}}
-\newcommand{\eeq}{\end{equation}}
-\newcommand{\Real}{\mathop{\mathrm{Re}}}
-\newcommand{\Imag}{\mathop{\mathrm{Im}}}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\newcommand{\rmd}{\mathrm{d}}
-\newcommand{\rmi}{\mathrm{i}}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\newcommand{\N}{\mathbb{N}}
-\newcommand{\R}{\mathbb{R}}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\newcommand{\hf}{\widehat{f}}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\newcommand{\sds}{\strut\displaystyle}
-\newcommand{\ud}{\frac{1}{2}}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\newcommand{\sku}{\vspace*{0.1cm}}
-\newcommand{\skd}{\vspace*{0.2cm}}
-\newcommand{\skt}{\vspace*{0.3cm}}
-\newcommand{\skq}{\vspace*{0.4cm}}
-\newcommand{\skc}{\vspace*{0.5cm}}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{document}
  
-\title{New Approximation method for the computation of particular values of polylogarithms}
+\title{SEGL - An Open Source C++ Library}
+\let\MakeUppercase\relax % this disables uppercasing authors
 
-\author{Abdalla M. Aboarab}
-\address{\sl Junior Student at Kafr El-Sheikh STEM School\\
-E--mail: abdulah.10840@stemksheikh.moe.edu.eg}
+\author{Anas Abdallah Ibrahim\\Merna Abdelbadie\\Youssef Mohamed Anwar}
+\address{\normalfont Undergraduate Students at the American University in Cairo}
 
 \keywords{Polylogarithm, Power Series, Computation, numerical differentiation}
 
 \begin{abstract}
-An efficient procedure for the computation of $Li_{s}(z)$ where $s<0$
-is here presented. We started with Polylogarithm $Li_{s}(z)$ where $s<0$. The summation of $n^{s}z^{n}$ is evaluated using a new method. An assumption is made that the power $n$ is multiplied by $x$ where $x=1$; then the series is integrated $s$ time in order to cancel the term $n^s$ out leaving the term $z^n$. By simply taking the derivative of the result $s$-times, an expression to evaluate the series arises which include only a constant term and the s$^{th}$ order of derivative of the summation of a simple geometric series.
-The computation of $Li_{s}(z)$ can then be performed in $\mathcal{O}(n)$ operations.
+This paper aims to introduce the library SEGL, a library that eases the implementation of graphs for C++ programmers and provides different functionalities that are related to graph operations. Library SEGL does not only offer to ease the use of graphs in programming, but also to implement different commonly required functionality in an optimal time and space complexities. In this paper, the time complexity, memory efficiency, and usability of functions in library SEGL are compared to other libraries such as BGL to be able to measure improvements. Moreover, the paper will contain the approach and techniques used to construct library SEGL.
 \end{abstract}
 
 \maketitle
