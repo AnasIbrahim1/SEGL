@@ -11,7 +11,7 @@
 #include <algorithm>
 using namespace std;
 
-template <class T> 
+template <class T>
 struct g_node {
 	T value;
 	set<pair<int, int>> adjList; // first is the node index, and second is the weight
@@ -46,8 +46,7 @@ private:
 	bool containNegativeWeights;
 	unordered_set<int> hasOutdegree; // store the indices of the nodes that have such that outdegree != 0
 	unordered_set<int> hasOutdegreeTranspose; // same but for transpose
-	void listEdges();
-	vector<pair<pair<int, int>, int>> edgeList;
+	vector<pair<pair<int, int>, int>> listEdges();
 	bool topSort(vector<int>& sorted, SEGL<T>& new_graph, vector<bool>& finished, int& finishedCount);
 
 public:
@@ -59,22 +58,22 @@ public:
 
 	void addNode();
 	void addNode(const T& value);
-	
+
 	void addEdge(int node_1, int node_2);
 	void addDirEdge(int from, int to);
 	void addWeightedEdge(int node_1, int node_2, int weight);
 	void addDirWeightedEdge(int from, int to, int weight);
-	
+
 	void removeEdge(int node_1, int node_2);
 	void removeEdge(int node_1, int node_2, int weight);
 	void removeDirEdge(int from, int to);
 	void removeDirEdge(int from, int to, int weight);
-	
+
 	void setNodeValue(int node, const T& value);
-	void setNodeValue(const T& old, const T& New); 
+	void setNodeValue(const T& old, const T& New); // O(V) 
 	T getNodeValue(int node);
 
-	int indegree(int node); 
+	int indegree(int node);
 	int outdegree(int node);
 
 	set<pair<int, int>> adjacent(int node);
@@ -85,7 +84,7 @@ public:
 	int numOfDirEdges();
 	int numOfEdges(); // assuming the graph is undirected
 
-	bool existsNode(const T& value); 
+	bool existsNode(const T& value);
 
 	bool existsEdge(int from, int to); // if exists directed edge, then exists undirected edge
 	bool existsEdge(int from, int to, int weight);
@@ -103,13 +102,13 @@ public:
 
 	bool existsPath(int from, int to); // Normal DFS, to do is optimize
 
-	int shortestDistance(int from, int to);	
+	int shortestDistance(int from, int to);
 
 	vector<int> shortestDistanceAll(int from);
 
 	pair<int, vector<int>> shortestPath(int from, int to);
-	
-	pair<bool,vector<int>> topSort(); // first is -1 if there doesn't exist a topological Sorting
+
+	pair<bool, vector<int>> topSort(); // first is -1 if there doesn't exist a topological Sorting
 
 	bool isDAG();
 
@@ -121,13 +120,13 @@ public:
 
 	//void condenseSCCs(); // *
 	// condense strongly connected components (Kosaraju's Algorithm)
-	
+
 	void clear();
 	~SEGL();
 };
 
 template <class T>
-SEGL<T>::SEGL() 
+SEGL<T>::SEGL()
 	: numNodes(0), numEdges(0)
 {
 	containNegativeWeights = false;
@@ -183,7 +182,7 @@ void SEGL<T>::addDirEdge(int from, int to) {
 	numEdges++;
 }
 
-template <class T> 
+template <class T>
 void SEGL<T>::addEdge(int node_1, int node_2) {
 	addDirEdge(node_1, node_2);
 	addDirEdge(node_2, node_1);
@@ -199,7 +198,7 @@ void SEGL<T>::addDirWeightedEdge(int from, int to, int weight) {
 	numEdges++;
 }
 
-template <class T> 
+template <class T>
 void SEGL<T>::addWeightedEdge(int node_1, int node_2, int weight) {
 	addDirWeightedEdge(node_1, node_2, weight);
 	addDirWeightedEdge(node_2, node_1, weight);
@@ -239,15 +238,15 @@ void SEGL<T>::removeDirEdge(int from, int to) {
 	if (nodes_transpose[to].adjList.size() == 0) hasOutdegreeTranspose.erase(to);
 }
 
-template <class T> 
-void SEGL<T>::removeEdge(int node_1, int node_2) { 
+template <class T>
+void SEGL<T>::removeEdge(int node_1, int node_2) {
 	// without weight given, all multiple edges from node 1 to node 2 will be removed	
 	removeDirEdge(node_1, node_2);
 	removeDirEdge(node_2, node_1);
 }
 
 template <class T>
-void SEGL<T>::removeDirEdge(int from, int to, int weight) { 
+void SEGL<T>::removeDirEdge(int from, int to, int weight) {
 	// differs if there are multiple edges of the same weights
 	auto edge = lower_bound(nodes[from].adjList.begin(), nodes[from].adjList.end(), make_pair(to, weight));
 	if (edge->first != to || edge->second != weight) return;
@@ -259,7 +258,7 @@ void SEGL<T>::removeDirEdge(int from, int to, int weight) {
 			nodes[from].adjList.erase(it);
 			it = edge++;
 		}
-		if (it != nodes[from].adjList.end() && it->first == to && it->second == weight) 
+		if (it != nodes[from].adjList.end() && it->first == to && it->second == weight)
 			nodes[from].adjList.erase(it);
 	}
 	if (nodes[from].adjList.size() == 0) hasOutdegree.erase(from);
@@ -332,7 +331,7 @@ void SEGL<T>::setNodeValue(int node, const T& value) {
 template <class T>
 void SEGL<T>::setNodeValue(const T& old, const T& New) {
 	for (int i = 0; i < nodes.size(); i++)
-		if (nodes[i].value == old) 
+		if (nodes[i].value == old)
 			nodes[i].value = New;
 }
 
@@ -362,11 +361,12 @@ int SEGL<T>::numOfEdges() {
 }
 
 template <class T>
-void SEGL<T>::listEdges() { // O(E)
-	edgeList.clear();
-	for (auto it = hasOutdegree.begin(); it != hasOutdegree.end(); it++) 
+vector<pair<pair<int, int>, int>> SEGL<T>::listEdges() { // O(E)
+	vector<pair<pair<int, int>, int>> edgeList;
+	for (auto it = hasOutdegree.begin(); it != hasOutdegree.end(); it++)
 		for (auto u : nodes[*it].adjList)
 			edgeList.push_back({ {*it, u.first}, u.second });
+	return edgeList;
 }
 
 template <class T>
@@ -415,8 +415,8 @@ bool SEGL<T>::existsPath(int from, int to, vector<bool>& visited) {
 	visited[from] = 1;
 	if (from == to) return true;
 	bool flag = false;
-	for (auto u : nodes[from].adjList) 
-		if (!visited[u.f]) 
+	for (auto u : nodes[from].adjList)
+		if (!visited[u.f])
 			flag = flag || existsPath(u.f, to, visited);
 	return flag;
 }
@@ -439,7 +439,7 @@ vector<int> SEGL<T>::shortestDistanceAll(int from) {
 	if (containNegativeWeights) { // Bellman-Ford O(V*E)
 		vector<int> dist(numNodes, INT_MAX);
 		dist[from] = 0;
-		listEdges();
+		auto edgeList = listEdges();
 		for (int i = 0; i < numNodes - 1; i++)
 			for (auto edge : edgeList)
 				dist[edge.first.second] = min(dist[edge.first.second], dist[edge.first.first] + edge.second);
@@ -449,15 +449,15 @@ vector<int> SEGL<T>::shortestDistanceAll(int from) {
 		vector<bool> visited(numNodes);
 		vector<int> dist(numNodes, INT_MAX);
 		dist[from] = 0;
-		priority_queue<pair<int,int>> q;
+		priority_queue<pair<int, int>> q;
 		q.push({ 0, from });
 		while (!q.empty()) {
 			int a = q.top().second; q.pop();
 			visited[a] = true;
-			for (auto u : nodes[a].adjList) 
+			for (auto u : nodes[a].adjList)
 				if (!visited[u.f]) {
 					dist[u.f] = min(dist[u.f], dist[a] + u.s);
-					q.push({ -1 * dist[u.f], u.f});
+					q.push({ -1 * dist[u.f], u.f });
 				}
 		}
 		return dist;
@@ -475,7 +475,7 @@ pair<int, vector<int>> SEGL<T>::shortestPath(int from, int to) {
 	vector<pair<int, int>> path(numNodes, { INT_MAX, -1 }); // first is distance, second is previous
 	if (containNegativeWeights) { // Bellman-Ford O(V*E)
 		path[from].first = 0;
-		listEdges();
+		auto edgeList = listEdges();
 		for (int i = 0; i < numNodes - 1; i++)
 			for (auto edge : edgeList)
 				if (path[edge.first.second].first > path[edge.first.first].first + edge.second)
@@ -513,8 +513,7 @@ pair<int, vector<int>> SEGL<T>::shortestPath(int from, int to) {
 
 template <class T>
 vector<pair<pair<int, int>, int>> SEGL<T>::getEdgeList() {
-	listEdges();
-	return edgeList;
+	return listEdges();
 }
 
 template <class T>
@@ -585,7 +584,7 @@ bool SEGL<T>::existsEulerianPath() {
 	if (!(count1 == 0 && count2 == 0) && !(count1 == 1 && count2 == 1)) return false;
 	SEGL<T> new_graph = *this;
 	// make the graph undirected
-	for (int u : new_graph.hasOutdegree) 
+	for (int u : new_graph.hasOutdegree)
 		for (auto v : new_graph.nodes[u].adjList)
 			new_graph.addDirWeightedEdge(v.f, u, v.s);
 	vector<bool> visited(numNodes);
