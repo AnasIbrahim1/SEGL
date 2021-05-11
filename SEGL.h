@@ -74,7 +74,7 @@ public:
 	void setNodeValue(const T& old, const T& New); 
 	T getNodeValue(int node);
 
-	int indegree(int node);
+	int indegree(int node); 
 	int outdegree(int node);
 
 	set<pair<int, int>> adjacent(int node);
@@ -117,8 +117,7 @@ public:
 
 	// traversal 
 	//bool existsHamiltonianPath(); // *
-	bool existsEulerianPath(); // *
-	
+	bool existsEulerianPath();
 
 	//void condenseSCCs(); // *
 	// condense strongly connected components (Kosaraju's Algorithm)
@@ -177,8 +176,8 @@ void SEGL<T>::addNode(const T& value) {
 
 template <class T>
 void SEGL<T>::addDirEdge(int from, int to) {
-	nodes[from].insert({ to, 1 });
-	nodes_transpose[to].insert({ from, 1 });
+	nodes[from].adjList.insert({ to, 1 });
+	nodes_transpose[to].adjList.insert({ from, 1 });
 	hasOutdegree.insert(from);
 	hasOutdegreeTranspose.insert(to);
 	numEdges++;
