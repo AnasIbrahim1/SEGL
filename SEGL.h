@@ -113,13 +113,14 @@ public:
 
 	bool isDAG();
 
-	int numSCCs(); // Kosaraju's
+	//int numSCCs(); // Kosaraju's
 
 	// traversal 
-	bool existsHamiltonian(); // *
-	bool existsEulerian(); // *
+	//bool existsHamiltonianPath(); // *
+	bool existsEulerianPath(); // *
 	
-	void condenseSCCs(); // *
+
+	//void condenseSCCs(); // *
 	// condense strongly connected components (Kosaraju's Algorithm)
 	
 	void clear();
@@ -553,6 +554,50 @@ bool SEGL<T>::isDAG() {
 	SEGL<T> new_graph = *this;
 	int finishedCount = 0;
 	return topSort(topsort, new_graph, finished, finishedCount);
+}
+
+//template <class T>
+//bool SEGL<T>::existsHamiltonianPath() { // Woodwall's theorem
+//	bool flag = false;
+//	for (int u = 0; u < numNodes - 1; u++) // checking every two nodes
+//		for (int v = u + 1; j < numNodes; v++) {
+//			flag = flag || nodes[u].adjList.count(v);
+//			flag = flag || (this->outdegree(u) + this->indegree(v) > numNodes);
+//		}
+//	if (flag) return true;
+//	// INCOMPLETE
+//}
+
+template <class T>
+bool SEGL<T>::existsEulerianPath() {
+	int count1 = 0, count2 = 0;
+	bool flag = false;
+	for (int i = 0; i < numNodes; i++) {
+		if (indegree(i) != outdegree(i)) {
+			if (indegree(i) - outdegree(i) == 1) count1++;
+			else if (outdegree(i) - indegree(i) == 1) count2++;
+			else {
+				flag = true;
+				break;
+			}
+		}
+	}
+	if (flag) return false;
+	if (!(count1 == 0 && count2 == 0) && !(count1 == 1 && count2 == 1)) return false;
+	SEGL<T> new_graph = *this;
+	// make the graph undirected
+	for (int u : new_graph.hasOutdegree) 
+		for (auto v : new_graph.nodes[u].adjList)
+			new_graph.addDirWeightedEdge(v.f, u, v.s);
+	vector<bool> visited(numNodes);
+	int count = 0;
+	for (int i = 0; i < numNodes; i++)
+		if (!visited[i] && new_graph.outdegree(i) != 0) {
+			dfs(i, visited);
+			count++;
+		}
+	if (count > 1) return false;
+	else return true;
 }
 
 #endif 
