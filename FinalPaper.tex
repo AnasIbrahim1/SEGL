@@ -1,0 +1,297 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\addtolength{\topmargin}{-.875in}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{inconsolata}
+\usepackage{listings}
+\def\code#1{\texttt{#1}}
+\lstset{
+ language = C++,
+ basicstyle = \ttfamily,
+ keywordstyle = \color{blue}\textbf,
+ commentstyle = \color{gray},
+ stringstyle = \color{green!70!black},
+ stringstyle = \color{red},
+ columns = fullflexible,
+ numbers = left,
+ numberstyle = \scriptsize\sffamily\color{gray},
+ xleftmargin = 0.16\textwidth,
+ xrightmargin = 0.16\textwidth,
+ showstringspaces = false,
+ float,
+}
+\newcommand{\Cpp}{C\texttt{++}}
+\textheight = 674 pt
+\begin{document}
+
+\title{\textbf{SEGL - AN OPEN SOURCE C++ LIBRARY}}
+\author{By Anas Abdallah Ibrahim - Merna Wael Abdelbadie \\ Youssef Mohamed Anwar \\ Undergraduate Students at the American University in Cairo}
+
+\date{May 2021}
+
+\maketitle
+
+\section{Abstract}
+The aim of SEGL is to provide programmers with a simple and efficient graph manipulation tool. This library eases the implementation of graphs for C++ programmers and provides different functionalities that are related to graph operations. SEGL implements a variety of commonly required functionality in optimal time and space complexities with efficient use of memory. The library is constructed to support the programmer with its usability.  The analysis provided in this paper is built to be easy to follow and comprehend. The Approach and techniques used to construct library SEGL will be discussed further.
+
+
+
+\textbf{Keywords}: Time complexity, Memory efficiency, Path finding, Usability, graph, Connected components.
+\section{Introduction}
+SEGL is a C++ library for representing graphs with the focus on the ease of use. Its name is an abbreviation for \underline{\textbf{S}}imple \underline{\textbf{E}}fficient \underline{\textbf{G}}raph \underline{\textbf{L}}ibrary.  Although libraries such as BGL \& LEMON provide great functionalities, they come with some problems. These libraries are complicated to use, hard to install, not beginner friendly to work with, and have a steep learning curve. An idea stemmed from this problem for a library that solves all the above hurdles and at the same time is used for educational purposes for beginner level programmers. Thus, SEGL was created to provide programmers with the same functionalities other libraries have, in a fast, efficient way, and is easy to implement and learn. In addition, SEGL provides programmers with new functionalities such as finding if the graph can be represented as a tree or if there are existing cycles. Additionally, SEGL is able to find if there exists an Eulerian path in the graph which is a unique functionality to this library.\\
+
+\section{Terminology}
+\hspace{0.8cm}A graph $G$ is defined to be a collection of nodes and edges that connect these nodes. More formally, it is a pair of sets $V$ and $E$ where $V$ is the set of nodes/vertices and $E$ is the set of edges. Note that the vertices can be represented by letters, numbers, strings, but in this paper we shall refer to them as numbers. $V$ will be a set of numbers that represent these vertices, and $E$ a set of tuples to represent connectivity, the first of each tuple is the starting node, and the second is the ending node, and the third is the weight. For example, $V=\{0,1,2\}$ and $E=\{(0,1,3),(0,2,1),(1,2,10)\}$ would correspond to the shown graph.
+\begin{figure}[h]
+\centering
+\includegraphics{Picture1.png}
+\end{figure}
+A graph is said to be \textbf{directed} when there exists an edge going from node $u$ to node $v$ without the existence of an edge going from $v$ to $u$. A graph is said to be \textbf{undirected} when every edge is going both directions.
+$|V|$ represents the number of nodes, and $|E|$ represents the number of directed edges.
+\section{Proposed Approach}
+In order to solve the problem proposed, a simpler implementation of the graph manipulation and algorithms was used. This is allowing programmers to easily track and understand the code written. The code, as aforementioned, of the library is written in C++, and in this section it shall be discussed in detail how it was implemented with C++ and C++ STL (Standard Template Library) containers.
+\subsection{Graph structure}
+\subsubsection{Nodes}
+
+The nodes in the graph are structs containing:
+
+\begin{itemize}
+    \item A data value with an unknown type (template in C++)
+    \item A set of pairs to model the graph as an adjacency list, the first of each pair is the index (i.e. ID) of the node adjacent to the current node, and the second is weight of the edge starting from the current node and ending to the node whose index is the first of the pair.
+\end{itemize}
+
+The node is provided with a parameterized constructor, a default constructor, a copy constructor, and an overloaded = operator for copying contents; this will be necessary for copying the contents of a whole graph.
+\subsubsection{Graph Representation}
+The library expects the programmer to address nodes in the graph with indices (from 0 to $|V| - 1$) as IDs to represent the nodes when adding and removing edges, finding shortest paths, … etc.
+One graph stores the following attributes:
+\begin{lstlisting}
+int numNodes;
+int numEdges;
+vector<g_node<T>> nodes;
+vector<g_node<T>> nodes_transpose;
+bool containNegativeWeights;
+unordered_set<int> hasOutdegree;
+unordered_set<int> hasOutdegreeTranspose; 
+\end{lstlisting}
+Where \code{numEdges} is the same as $|E|$ and \code{numNodes} is the same as $|V|$. It also stores a vector of nodes and their transpose. There are other private attributes used in the implementation of public functions. The total space complexity of one graph is $O\left(|V|+|E|\right)$
+\subsection{Graph manipulation}
+SEGL provides programmers with all the functionalities to manipulate the graph such as:
+\begin{itemize}
+    \item Adding, removing, and editing nodes and edges.
+\item Retrieval of all the nodes and edges data such as the in and out degrees of a node, the data and the weight the node is holding, and direction of an edge.
+\item Checking the existence of a node with a certain value, setting and getting values for nodes. 
+\end{itemize}
+The adding, removing and retrieval of edges is done in $\displaystyle O\left(\log\left(\frac{|E|}{|V|}\right)\right)$ which will be analyzed and discussed later. The retrieval of one node through the \code{std::vector} is $O(1)$. 
+
+
+
+\pic
+\subsection{Algorithms and Functionalities}
+The functionalities SEGL provides are many.
+\begin{enumerate}
+    \item \textbf{Getters}\\
+    \intertext{There are a collection of getters for the user to use at will:
+\begin{lstlisting}
+set<pair<int, int>> adjacent(int node);
+int numOfNodes(); 
+int numOfDirEdges();
+int numOfEdges();
+vector<pair<pair<int, int>, int>> getEdgeList(); 
+\end{lstlisting}
+\code{adjacent} retrieves the adjacency list for any node in the form of a set. \code{numOfNodes} retrieves the number of nodes. Noting that the attribute \code{numEdges} to each graph is referred to as the number of directed edges - because undirected edges are directed ones going both ways - the function \code{numOfDirEdges} gets the integer $\code{numEdges}$, and the function $\code{numOfEdges}$ assumes the graph is undirected and gets the same number divided by 2.
+The function \code{getEdgeList} is when the attribute set \codes{hasOutdegree} comes in handy. Since normally retrieving an edge list from an adjacency list would have a complexity of $O\left(|V|+|E|\right)$, for sparse graphs, that is graphs that contains many vertices that has in and out degrees of 0, this is inefficient. Thus, it is recorded in an \code{unordered\_set} any index that has an outdegree not equal to 0 so that we can traverse these nodes directly. That reduces the complexity of getting an edge list down to $O\left(|E|\right)$, noting that \code{unordered\_set} operations are in $O(1)$. The edge list is returned as a vector of three integer structure (represented as \code{pair<pair<int,int>,int>}) the first is the source node, second is the destination node, and third is the weight.
+}
+
+\item \textbf{Indegrees, Outdegrees, and Transpose of the graph}\\
+\intertext{The programmer will be able to transpose the graph at will, since there is already an attribute to the graph which is its transpose. Thus, the implementation of this function shall be simple:
+\begin{lstlisting}
+template <class T>
+void SEGL<T>::transpose() {
+	swap(nodes, nodes_transpose);
+	swap(hasOutdegree, hasOutdegreeTranspose);
+}
+\end{lstlisting}
+The array is kept in the graph because it is used in finding the indegree of the node.
+\begin{lstlisting}
+template <class T> int SEGL<T>::outdegree(int node)
+    { return nodes[node].adjList.size(); }
+template <class T> int SEGL<T>::indegree(int node)
+    { return nodes_transpose[node].adjList.size();}
+\end{lstlisting}
+}
+\item \textbf{Number of connected components, existence of cycles, and tree property\\}
+Note that these functions assume that the graph is undirected, otherwise the functions will give false values. These functions use Depth-First Search (DFS)[6] to find the number of connected components in an undirected graph. The function uses a vector of boolean variables with size $|V|$ with each entry $a_i$ which corresponds to index $i$ being visited by the DFS or not.Thus, to count the number of connected components, the function finds the first unvisited node and starts DFS from that node:
+\begin{lstlisting}
+template <class T>
+int SEGL<T>::numConnectedComponents() { // DFS
+	vector<bool> visited(numNodes);
+	int count = 0;
+	for (int i = 0; i < numNodes; i++)
+		if (!visited[i]) {
+			dfs(i, visited);
+			count++;
+		}
+	return count;
+}
+\end{lstlisting}
+This way, one can find if the graph is a tree or not by checking if the number of connected components is equal to 1 and if $|E|=|V|-1$ which is a property of trees [6]. Now to check the existence of cycles, one can note that one connected component is acyclic if and only if it can be represented as a tree (by the definition of a tree, an acyclic graph), so $|E|=|V|-1$, and if $|E|>|V|-1$ then there must exist a cycle. For multiple connected components, it can be proved that there is a cycle if and only if $|E|>|V|-n$, where $n$ is the number of connected components.
+
+\item \textbf{Shortest Distance and Shortest Paths
+\\}During edge addition, it is checked if there is a negative weight inserted, and it is recorded in a boolean variable called \code{containNegativeWeights}. If it is true, finding the Shortest Distance will involve implementing Bellman-Ford Algorithm [2]. Otherwise, we implement Dijkstra’s Algorithm [1]. This is important because the complexity of Dijkstra’s is much less than the complexity of Bellman-Ford.
+\item \textbf{Topological Sorting and Directed Acyclic Graph (DAG) checking
+\\}
+The public function \code{topSort} uses a private recursive overloading function to retrieve the topological sorting of the graph using Kahn’s algorithm. [3] This function returns \code{pair<bool, vector<int>>}, the first indicates if there exists a topological sorting, and the second is the sorting of the indices as nodes if it exists. Note that a topological sorting exists if and only if the graph is a DAG. This way, we can use the function \code{topSort} to determine if the graph is directed or not in a new boolean return-type function \code{isDAG}.
+\item \textbf{Existence of Eulerian Path\\}
+An Eulerian Path in a directed graph exists if and only if 
+\begin{itemize}
+    \item The underlying undirected graph has all its vertices of non-zero degree belong to one single connected component.
+    \item Either all vertices has equal in and out degrees, or there are two nodes such that the first has outdegree-indegree=1 and the second has indegree - outdegree =1 and the rest has equal in and out degrees.
+
+\end{itemize}
+According to these two conditions, a function efficiently implements if there exists an Eulerian Path in the graph.[7]
+
+\end{enumerate}
+
+\section{ Results and Evaluation}
+In the edge insertion, deletion, and retrieval, an C++ std::set was specifically used to represent the adjacent nodes to each node to enable better time complexity and memory efficiency. STL maps and unordered\_maps would save the data inserted when asked for edge retrieval and existence, which in return would in turn store piles of unused memory. Sets allow us to search for a pair whose first is a specific index to ask for existence of the edge between them, no matter what the weight is, which is the second; this is implemented using binary search in $O(\log(\text{Outdegree}(u)))$ time, where $u$ is the current node. Since the average degree is $$\frac{\sum_{u \in V}\text{Outdegree}(u)}{|V|}=\frac{|E|}{|V|},\text{ the average complexity is }O\left(\log\left(\frac{|E|}{|V|}\right)\right)$$ 
+Listing the edges in an edge list has a time complexity of $O(|E|)$. Now, we shall look at each of the algorithm implementation of functions and analyse its complexity.
+\begin{enumerate}
+    \item \textbf{Indegrees, Outdegrees, and Transpose\\}
+    \intertext{Refer to their respective functions in section 3.3. Retrieval of indegrees and outdegrees is done in $O(1)$. The swap function in transposing the graph uses a copy constructor, the complexity of which is $O(|V|)$, since the number of nodes that has outdegree not equal to zero (in the \code{unordered\_set}) are only a subset of $V$.}
+    \item\textbf{Number of connected components, existence of cycles, and tree property\\}
+    \intertext{All of these functionalities use the function \code{dfs} that implements the Depth-First Search, with a well-known complexity of  $O\left(|V|+|E|\right)$
+\begin{lstlisting}
+template <class T>
+void SEGL<T>::dfs(int node, vector<bool>& visited) {
+	visited[node] = 1;
+	for (auto u : nodes[node].adjList)
+		if (!visited[u.f]) dfs(u.f);
+}
+\end{lstlisting}
+This is because the function traverses each node and each edge.}
+
+
+\item \textbf{Shortest Distance and Shortest Paths\\}
+\intertext{The complexity of the Bellman-Ford algorithm is  $O\left(|V|\cdot|E|\right)$
+\begin{lstlisting}
+if (containNegativeWeights) { // Bellman-Ford O(V*E)
+		vector<int> dist(numNodes, INT_MAX);
+		dist[from] = 0;
+		auto edgeList = listEdges();
+		for (int i = 0; i < numNodes - 1; i++)
+			for (auto edge : edgeList)
+				dist[edge.first.second] = 
+				min(dist[edge.first.second], 
+				dist[edge.first.first] + edge.second);
+		return dist;
+	}
+\end{lstlisting}
+This is because the function goes through each edge $|V|$ times.
+However, the complexity of dijkstra using a \code{priority\_queue} is $O\left(|E|+|V|\log\left(|V|\right)\right)$
+}
+\item \textbf{Topological Sorting and Directed Acyclic Graph (DAG) checking\\}
+\intertext{The recursive function implements Kahn’s algorithm as follows:
+\begin{lstlisting}
+template <class T>
+bool SEGL<T>::topSort(vector<int>& sorted, SEGL<T>& new_graph, 
+    vector<bool>& finished, int& finishedCount) {
+	int temp = -1;
+	for (int i = 0; i < numNodes; i++)
+		if (nodes_transpose[i].adjList.size() == 0 && 
+		    !finished[i]) {
+			temp = i;
+			break;
+		} // O(V)
+	if (temp == -1) if (finishedCount < numNodes)     
+	return false;
+	if (finishedCount == numNodes) return true;
+	sorted.push_back(temp);
+	finished[temp] = 1;
+	finishedCount++;
+	auto lis = new_graph.nodes[temp].adjList;
+	for (auto u : lis)
+		new_graph.removeDirEdge(temp, u.f); // O(E/V)
+	return topSort(sorted, new_graph, finished, finishedCount);
+	
+}
+\end{lstlisting}
+It first finds a node with an indegree equal to
+	zero, 
+	pushes it in the sorted vector, removes it from the graph and implements the same function recursively on the new graph. The function finds an index with an indegree of zero in $O\left(|V|\right)$ and removes the node in $\displaystyle O\left(\frac{|E|}{|V|}\right)$ resulting in a total complexity of $\displaystyle O\left(|V|+\frac{|E|}{|V|}\right)$, since this is done $|V|$ times, we have a total complexity of $O(|V|^2 + |E|)$.
+}
+\item \textbf{Existence of Eulerian Path }
+\intertext{The function is implemented as follows
+
+\begin{lstlisting}
+template <class T>
+bool SEGL<T>::existsEulerianPath() {
+	int count1 = 0, count2 = 0;
+	bool flag = false;
+	for (int i = 0; i < numNodes; i++) {
+		if (indegree(i) != outdegree(i)) {
+			if (indegree(i) - outdegree(i) == 1)
+			count1++;
+			else if (outdegree(i) - indegree(i) == 1)
+			count2++;
+			else {
+				flag = true;
+				break;
+			}
+		}
+	}
+	if (flag) return false;
+	if (!(count1 == 0 && count2 == 0) && 
+	!(count1 == 1 && count2 == 1)) return false;
+	SEGL<T> new_graph = *this;
+	// make the graph undirected
+	for (int u : new_graph.hasOutdegree) 
+		for (auto v : new_graph.nodes[u].adjList)
+			new_graph.addDirWeightedEdge(v.f, u, v.s);
+	vector<bool> visited(numNodes);
+	int count = 0;
+	for (int i = 0; i < numNodes; i++)
+		if (!visited[i] && new_graph.outdegree(i) != 0) {
+			dfs(i, visited);
+			count++;
+		}
+	if (count > 1) return false;
+	else return true;
+}
+\end{lstlisting}
+ It first traverses the nodes in $O\left(|V|\right)$ to check the last two conditions, then in $O\left(|E|^2\right)$ gets the undirected underlying graph, and in $O\left(|V|+|E|\right)$ implements a DFS to find the number of connected components in the directed underlying graph with a non-zero degree, resulting in a total complexity of $O\left(|V|+|E|^2\right)$.
+}
+\end{enumerate}
+\section{Conclusions and future work}
+\subsection{Conclusions}
+Set container is the best way to implement a graph library. By utilizing library SEGL, programmers will be able to implement functions in previous libraries with better memory efficiency and less time cost while being programmers friendly.
+\subsection{Future work}
+In the future, implementation of more functionalities such as finding hamiltonian and eulerian paths and cycles (note that what we implemented is finding if there exists an eulerian path, but not finding the path itself) and finding the number of strongly connected components as well as condensing them using Kosaraju's Algorithm [6], using namespaces native to the library, error handling, and optimizing of topological sorting down to $O\left(|V|+|E|\right)$ complexity are all ideas that we plan to work on in the future. We may also consider making the programmer choose a key ID to each of the nodes that will be hashed to the node index used in the library, that will assist the condensing of strongly connected components. All these ideas will further strengthen the library, making it more versatile while maintaining the simplicity. These functions will also be implemented in the same manner as the ones already in the library; they will be implemented to have the best possible time complexity, memory efficiency, and usability.
+
+
+\section{References}
+\begin{enumerate}
+    \item E. W. Dijkstra. (1959). A note on two problems in connexion with graphs. Numerische Mathematik, 1(1):269–271
+    \item Ford, L. R., (1956) Network flow theory. RAND Corporation, Santa Monica, California.
+
+    \item Kahn, Arthur B. (1962), "Topological sorting of large networks", Communications of the ACM, 5 (11): 558–562
+
+    \item Laaksonen, A. (2018). Competitive Programmer’s Handbook. https://cses.fi/book/book.pdf
+
+    \item Lee, L., Lumsdaine, A., & Siek, J. G. (2001). The boost graph library: User guide and reference manual. Addison-Wesley Professional.
+    
+    \item  Levitin, A. (2007). Introduction to the design \& analysis of algorithms (2nd ed.). Pearson/Addison-Wesley.
+
+    \item Wilson, R. J. (1996). Introduction to graph theory (4th ed.). Longman.
+
+    
+
+\end{enumerate}
+\end{document}
+
+% “
